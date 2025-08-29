@@ -21,8 +21,8 @@ const findAllStudents = async (payload) => {
         WHERE t1.role_id = 3`;
     let queryParams = [];
     if (name) {
-        query += ` AND t1.name = $${queryParams.length + 1}`;
-        queryParams.push(name);
+        query += ` AND t1.name ILIKE $${queryParams.length + 1}`;
+        queryParams.push(`%${name}%`);
     }
     if (className) {
         query += ` AND t3.class_name = $${queryParams.length + 1}`;
