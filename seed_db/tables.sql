@@ -350,6 +350,11 @@ BEGIN
     _roll := COALESCE((data->>'roll')::INTEGER, NULL);
 
     IF _userId IS NULL THEN
+        -- Try to get userId by email
+        SELECT id INTO _userId FROM users WHERE email = _email AND role_id = _roleId;
+    END IF;
+
+    IF _userId IS NULL THEN
         _operationType := 'add';
     ELSE
         _operationType := 'update';
@@ -364,12 +369,11 @@ BEGIN
         SELECT id from users WHERE role_id = 1 ORDER BY id ASC LIMIT 1 INTO _reporterId;
     END IF;
 
-    IF NOT EXISTS(SELECT 1 FROM users WHERE id = _userId) THEN
-
+    IF _operationType = 'add' THEN
         IF EXISTS(SELECT 1 FROM users WHERE email = _email) THEN
-        RETURN QUERY
-            SELECT NULL::INTEGER, false, 'Email already exists', NULL::TEXT;
-        RETURN;
+            RETURN QUERY
+                SELECT NULL::INTEGER, false, 'Email already exists', NULL::TEXT;
+            RETURN;
         END IF;
 
         INSERT INTO users (name,email,role_id,created_dt,reporter_id)
@@ -383,41 +387,42 @@ BEGIN
         RETURN QUERY
             SELECT _userId, true, 'Student added successfully', NULL;
         RETURN;
+    ELSE
+
+    
+        --update user tables
+        UPDATE users
+        SET
+            name = _name,
+            email = _email,
+            role_id = _roleId,
+            is_active = _systemAccess,
+            updated_dt = now()
+        WHERE id = _userId;
+
+        UPDATE user_profiles
+        SET
+            gender = _gender,
+            phone = _phone,
+            dob = _dob,
+            admission_dt = _admissionDt,
+            class_name = _className,
+            section_name  =_sectionName,
+            roll = _roll,
+            current_address = _currentAddress,
+            permanent_address = _permanentAddress, 
+            father_name = _fatherName,
+            father_phone = _fatherPhone,
+            mother_name = _motherName,
+            mother_phone = _motherPhone,
+            guardian_name = _guardianName,
+            guardian_phone = _guardianPhone,
+            relation_of_guardian = _relationOfGuardian
+        WHERE user_id = _userId;
+
+        RETURN QUERY
+            SELECT _userId, true , 'Student updated successfully', NULL;
     END IF;
-
-
-    --update user tables
-    UPDATE users
-    SET
-        name = _name,
-        email = _email,
-        role_id = _roleId,
-        is_active = _systemAccess,
-        updated_dt = now()
-    WHERE id = _userId;
-
-    UPDATE user_profiles
-    SET
-        gender = _gender,
-        phone = _phone,
-        dob = _dob,
-        admission_dt = _admissionDt,
-        class_name = _className,
-        section_name  =_sectionName,
-        roll = _roll,
-        current_address = _currentAddress,
-        permanent_address = _permanentAddress, 
-        father_name = _fatherName,
-        father_phone = _fatherPhone,
-        mother_name = _motherName,
-        mother_phone = _motherPhone,
-        guardian_name = _guardianName,
-        guardian_phone = _guardianPhone,
-        relation_of_guardian = _relationOfGuardian
-    WHERE user_id = _userId;
-
-    RETURN QUERY
-        SELECT _userId, true , 'Student updated successfully', NULL;
 EXCEPTION
     WHEN OTHERS THEN
         RETURN QUERY
